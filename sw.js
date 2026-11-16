@@ -1,6 +1,6 @@
 // Keeps the app shell available offline. Google data is always fetched live.
-const VERSION = 'dc-v1';
-const SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'parser.js', 'config.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
+const VERSION = 'dc-v2';
+const SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'parser.js', 'config.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(VERSION).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
