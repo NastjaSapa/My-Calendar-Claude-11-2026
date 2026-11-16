@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dopamine Calendar</title>
+<meta name="theme-color" content="#FF8FA4">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=DM+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body data-mode="work">
+<main id="app" aria-live="polite"></main>
+<div id="sheet-root"></div>
+<div id="toast" role="status"></div>
+<script src="parser.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+<script async defer src="https://accounts.google.com/gsi/client" onload="window.DC && DC.gisLoaded()"></script>
+</body>
+</html>
