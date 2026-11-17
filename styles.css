@@ -9,7 +9,7 @@ body[data-mode="work"] {
   --star: #F7965E;
 }
 /* Migraine: "dark pastel". Dark surfaces, dimmed pastel accents, no white, no motion.
-   Also used by the consent screen and privacy page. Two brightness levels. */
+   Also used by the consent screen and privacy page. A light "pastel" look can be picked instead. */
 body[data-mode="migraine"], body[data-screen="consent"], .darkzone {
   --bg: #16151F; --ink: #D9D5E8; --muted: #9A96B0; --hero: #1E1D2A; --hero-ink: #D9D5E8;
   --accent: #25243A; --accent-strong: #ABA6D8; --card: #1E1D2A; --line: #2A2939;
@@ -21,15 +21,20 @@ body[data-mode="migraine"], body[data-screen="consent"], .darkzone {
   --sage: #9FC7AF; --sage-bg: #1F2C26; --lav: #ABA6D8; --lav-bg: #25243A;
   --rose: #CFA3B9; --rose-bg: #2D2230; --blue: #97BCCF; --blue-bg: #1D2930; --edge: #3A384C;
 }
-body[data-mode="migraine"][data-level="darker"], body[data-screen="consent"][data-level="darker"] {
-  --bg: #0E0D14; --ink: #BDB9CE; --muted: #858199; --hero: #17161F; --hero-ink: #BDB9CE;
-  --accent: #1C1B2D; --accent-strong: #9490C2; --card: #17161F; --line: #222130;
-  --prio: #18221D; --notes: #172126; --toggle-bg: #1C1B2D; --fab: #1C1B2D;
-  --t0: #1C1B2D; --t1: #18221D; --t2: #231A26; --t3: #172126;
-  --d0: #B48EA1; --d1: #9490C2; --d2: #82A6B8; --d3: #86AD96;
-  --sage: #86AD96; --sage-bg: #18221D; --lav: #9490C2; --lav-bg: #1C1B2D;
-  --rose: #B48EA1; --rose-bg: #231A26; --blue: #82A6B8; --blue-bg: #172126; --edge: #2C2A3A;
+/* Migraine "pastel": the soft, light iridescent look from version 1 */
+body[data-mode="migraine"][data-look="pastel"] {
+  --bg: #F5F3FA; --ink: #3E3D5C; --muted: #6B6987; --hero: linear-gradient(135deg, #BFE4F2 0%, #F4EBB8 30%, #F3CBE2 55%, #C4C2E6 78%, #C7EFE8 100%); --hero-ink: #3E3D5C;
+  --accent: #FFFFFF; --accent-strong: #6E6CA0; --card: #FFFFFF; --line: #EEECF6;
+  --prio: #E3E2F3; --notes: #DDEFF7; --toggle-bg: rgba(255,255,255,0.55); --toggle-off: #3E3D5C;
+  --chip-off: rgba(255,255,255,0.45); --fab: #C4C2E6; --shadow: none;
+  --t0: #DDEFF7; --t1: #F7F1D2; --t2: #F6E0EC; --t3: #E3E2F3;
+  --d0: #8E8BC9; --d1: #A6A3D6; --d2: #C2C0E6; --d3: #DAD9F0;
+  --star: transparent;
+  --sage: #3F6B55; --sage-bg: #DDF1E6; --lav: #4E4B86; --lav-bg: #E3E2F3;
+  --rose: #8A4A6B; --rose-bg: #F6E0EC; --blue: #35617A; --blue-bg: #DDEFF7; --edge: #D8D5EA;
 }
+body[data-mode="migraine"][data-look="pastel"] .mig { background: linear-gradient(160deg, #DFF0F7 0%, #F8F3DA 28%, #F7E2EE 55%, #E6E4F5 80%, #E0F5F1 100%) top / 100% 360px no-repeat; }
+body[data-mode="migraine"][data-look="pastel"] .sheet-backdrop { background: rgba(62,61,92,.25); }
 body[data-mode="weekend"] {
   --bg: #FFF4EE; --ink: #2E1A4F; --hero: linear-gradient(165deg, #A790EA 0%, #F9A3E2 55%, #FF9C8F 100%); --hero-ink: #2E1A4F;
   --accent: #FFD68B; --accent-strong: #D9541A; --card: #FFFFFF; --line: #F5E8F2;
@@ -295,7 +300,7 @@ body[data-mode="migraine"] .signin h1 { color: var(--lav); }
 /* ---------- Symptom tracker & medication sheets ---------- */
 .ph-title { font-size: 42px !important; color: var(--lav); }
 .ph-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.ph-tile { height: 138px; border-radius: 32px; border: 3px solid transparent; font-size: 17px; font-weight: 800; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
+.ph-tile { width: 100%; height: 138px; border-radius: 32px; border: 3px solid transparent; position: relative; font-size: 17px; font-weight: 800; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
 .ph-tile.blue { background: var(--blue-bg); color: var(--blue); }
 .ph-tile.lav { background: var(--lav-bg); color: var(--lav); }
 .ph-tile.rose { background: var(--rose-bg); color: var(--rose); }
@@ -305,7 +310,7 @@ body[data-mode="migraine"] .signin h1 { color: var(--lav); }
 .ph-box-h { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 13px; font-weight: 800; letter-spacing: .06em; color: var(--muted); }
 .ph-box-h b { color: var(--lav); letter-spacing: 0; font-size: 15px; }
 .ph-auras { display: flex; justify-content: space-between; gap: 10px; }
-.ph-aura { flex: 1; height: 72px; border-radius: 36px; border: 2.5px solid transparent; background: var(--lav-bg); color: var(--lav); display: flex; align-items: center; justify-content: center; }
+.ph-aura { width: 100%; height: 84px; border-radius: 30px; border: 2.5px solid transparent; background: var(--lav-bg); color: var(--lav); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 13px; font-weight: 800; position: relative; }
 .ph-aura.on { border-color: var(--lav); }
 .ph-share { margin: 0; font-size: 14px; line-height: 1.4; color: var(--muted); }
 .med-chips .chip { height: 56px; font-size: 17px; padding: 0 20px; }
@@ -387,3 +392,54 @@ body[data-screen="consent"] { background: var(--bg); color: var(--ink); }
 .c-foot { text-align: center; font-size: 13px !important; color: var(--muted); }
 .c-foot a, .consent a { color: var(--lav); }
 body[data-screen="consent"] #app { padding-bottom: 0; }
+
+/* ---------- Migraine: "Now" landing page + normal day view ---------- */
+.mig-nav .navseg button { padding: 0 14px; display: inline-flex; align-items: center; gap: 6px; }
+.mig-nav .navseg button svg { width: 18px; height: 18px; }
+.mig-whole { height: 52px; border-radius: 26px; border: 1.5px solid var(--edge); background: transparent; color: var(--lav); font-size: 16px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.mig-whole svg { width: 18px; height: 18px; }
+body[data-mode="migraine"] .holdable { cursor: default; }
+
+/* ---------- Symptom tracker: several at once + explanations ---------- */
+.ph-sub { margin: -6px 0 0; font-size: 14px; font-weight: 600; color: var(--muted); }
+.ph-wrap { position: relative; }
+.ph-wrap-aura { flex: 1; }
+.ph-check { position: absolute; left: 14px; top: 14px; width: 26px; height: 26px; border-radius: 13px; background: currentColor; display: inline-flex; align-items: center; justify-content: center; }
+.ph-check svg { width: 16px; height: 16px; stroke: var(--bg); }
+.ph-i { position: absolute; right: 8px; top: 8px; width: 36px; height: 36px; border-radius: 18px; border: 1.5px solid var(--edge); background: var(--bg); color: var(--muted);
+  font-family: Georgia, serif; font-style: italic; font-weight: 700; font-size: 16px; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
+.ph-i[aria-expanded="true"] { color: var(--ink); border-color: var(--ink); }
+/* Hover (mouse) or keyboard focus shows the explanation as a bubble; on touch screens use the "i" */
+.ph-tip { display: none; position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 3; background: var(--ink); color: var(--bg);
+  border-radius: 16px; padding: 10px 12px; font-size: 13px; font-weight: 600; line-height: 1.4; box-shadow: 0 6px 20px rgba(0,0,0,.35); pointer-events: none; }
+.ph-wrap-aura .ph-tip { left: -40px; right: -40px; }
+@media (hover: hover) { .ph-wrap:hover .ph-tip { display: block; } }
+.ph-wrap:has(.ph-tile:focus-visible) .ph-tip, .ph-wrap:has(.ph-aura:focus-visible) .ph-tip { display: block; }
+.ph-info { border-radius: 22px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; font-size: 14px; line-height: 1.45; }
+.ph-info b { font-size: 15px; }
+.ph-info.blue { background: var(--blue-bg); color: var(--blue); } .ph-info.lav { background: var(--lav-bg); color: var(--lav); }
+.ph-info.rose { background: var(--rose-bg); color: var(--rose); } .ph-info.sage { background: var(--sage-bg); color: var(--sage); }
+.ph-info span { color: var(--ink); }
+.ph-more { align-self: flex-start; border: none; background: transparent; color: var(--lav); font-size: 14px; font-weight: 800; text-decoration: underline; padding: 6px 0; min-height: 36px; }
+.ph-aura-info { display: flex; flex-direction: column; gap: 6px; font-size: 14px; line-height: 1.45; color: var(--ink); }
+.ph-aura-info b { color: var(--lav); }
+
+/* ---------- One-time offer of the migraine log ---------- */
+.offer-card { gap: 8px; }
+.offer-card h2 { font-size: 28px; }
+.offer-k { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; letter-spacing: .06em; }
+.offer-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px; }
+.offer-btns .add-line { border-style: solid; }
+.offer-btns .add-line:first-child { background: var(--ink); color: var(--card); }
+.offer-later { border-width: 1.5px; opacity: .8; }
+.offer-privacy { font-size: 13px; font-weight: 800; color: inherit; text-align: center; padding: 6px; }
+
+/* ---------- Migraine look picker + mode button on the "Now" page ---------- */
+.looks { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.look-opt { border-radius: 22px; border: 2.5px solid var(--edge, var(--ink)); background: var(--card); padding: 10px; text-align: left; display: flex; flex-direction: column; gap: 4px; color: var(--ink); }
+.look-opt b { font-size: 17px; } .look-opt span:last-child { font-size: 13px; font-weight: 600; }
+.look-opt.on { border-color: var(--ink); box-shadow: 0 0 0 2px var(--ink) inset; }
+.look-sw { height: 44px; border-radius: 14px; display: block; }
+.look-dark .look-sw { background: linear-gradient(135deg, #16151F 0 50%, #25243A 50% 70%, #1F2C26 70%); border: 1px solid #3A384C; }
+.look-pastel .look-sw { background: linear-gradient(135deg, #BFE4F2 0%, #F4EBB8 30%, #F3CBE2 55%, #C4C2E6 78%, #C7EFE8 100%); }
+.mig-pill { background: var(--lav-bg); color: var(--lav); }

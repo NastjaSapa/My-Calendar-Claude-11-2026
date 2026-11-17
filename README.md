@@ -9,7 +9,7 @@ A colorful face for Google Calendar and Google Tasks. It's a web app you can ins
 - **Week notes**: to-dos for the week that don't belong to a particular day
 - **Day, Week and Month views**: the month view works in every mode and shows migraine days once the log is on
 - **Two moods**: Work (Mon–Thu 9–16) and Weekend (all other times), picked automatically or by hand
-- **Migraine mode ("dark pastel")**: dark screen, dimmed colors, no animation, two brightness levels (Dim / Darker)
+- **Migraine mode**: two looks to choose from – "Dark" (dark screen, dimmed colors) or "Pastel" (soft, light iridescent pastels); no animation. Tap the "Migraine" button to open the mode picker.
   - **Just one thing**: during a migraine the day view shows only your #1 priority; the rest of today can be moved to tomorrow with one tap
   - **Symptom tracker**: big tiles for warning signs, aura, headache and recovery, optional aura type (seeing / feeling / speaking), one-tap medication log, "Tell my person" via the phone's share sheet
   - **Shortcuts**: long-press the app icon → "Migraine now" (opens straight into the dark mode), or press and hold the date in the app. Every start can be undone.

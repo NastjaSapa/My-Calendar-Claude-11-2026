@@ -19,9 +19,9 @@
 try {
   var a = JSON.parse(localStorage.getItem('dc.attack') || 'null');
   if ((a && a.active) || /[?&]migraine/.test(location.search)) {
-    var lv = JSON.parse(localStorage.getItem('dc.level') || '"dim"');
-    document.body.dataset.mode = 'migraine'; document.body.dataset.level = lv;
-    document.querySelector('meta[name="theme-color"]').content = lv === 'darker' ? '#0E0D14' : '#16151F';
+    var lk = JSON.parse(localStorage.getItem('dc.look') || '"dark"');
+    document.body.dataset.mode = 'migraine'; document.body.dataset.look = lk;
+    document.querySelector('meta[name="theme-color"]').content = lk === 'pastel' ? '#C4C2E6' : '#16151F';
   }
 } catch (e) {}
 </script>
