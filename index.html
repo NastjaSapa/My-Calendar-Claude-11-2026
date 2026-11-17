@@ -14,6 +14,17 @@
 <link rel="stylesheet" href="styles.css">
 </head>
 <body data-mode="work">
+<script>
+/* Open dark straight away during a migraine (or from the "Migraine now" shortcut), so there's no bright flash */
+try {
+  var a = JSON.parse(localStorage.getItem('dc.attack') || 'null');
+  if ((a && a.active) || /[?&]migraine/.test(location.search)) {
+    var lv = JSON.parse(localStorage.getItem('dc.level') || '"dim"');
+    document.body.dataset.mode = 'migraine'; document.body.dataset.level = lv;
+    document.querySelector('meta[name="theme-color"]').content = lv === 'darker' ? '#0E0D14' : '#16151F';
+  }
+} catch (e) {}
+</script>
 <main id="app" aria-live="polite"></main>
 <div id="sheet-root"></div>
 <div id="toast" role="status"></div>
