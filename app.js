@@ -74,13 +74,19 @@
     { id: '1', name: 'Lavender', hex: '#C9BDF4' },
     { id: '6', name: 'Tangerine', hex: '#F7965E' }
   ];
+  // Symptom tiles. Several can be on at the same time. The info text explains each one
+  // in plain words – it describes, it never diagnoses.
   const PHASES = [
-    ['warning', 'Warning signs', 'wave', 'blue'],
-    ['aura', 'Aura', 'aura', 'lav'],
-    ['headache', 'Headache', 'bolt', 'rose'],
-    ['recovering', 'Recovering', 'leaf', 'sage']
+    ['warning', 'Warning signs', 'wave', 'blue', 'Early signs, hours up to a day before: tiredness, yawning, stiff neck, cravings, or being sensitive to light and sound.'],
+    ['aura', 'Aura', 'aura', 'lav', 'Usually 5 to 60 minutes, often before the headache: flickering or zigzag lines, blind spots, tingling, or trouble finding words.'],
+    ['headache', 'Headache', 'bolt', 'rose', 'The pain phase, often with nausea and sensitivity to light, sound or smells.'],
+    ['recovering', 'Recovering', 'leaf', 'sage', 'The “migraine hangover” after the pain: tired, foggy, slower thinking. Can last up to a day.']
   ];
-  const AURA_TYPES = [['seeing', 'Seeing', 'eye'], ['feeling', 'Feeling, tingling', 'hand'], ['speaking', 'Words, speaking', 'speech']];
+  const AURA_TYPES = [
+    ['seeing', 'Seeing', 'eye', 'Flickering, zigzag lines, blind spots or blurry vision.'],
+    ['feeling', 'Feeling', 'hand', 'Tingling or numbness, often in the hand, arm or face.'],
+    ['speaking', 'Words', 'speech', 'Trouble finding or saying words, or understanding others.']
+  ];
 
   // ---------- state ----------
   if (store.get('mode', 'auto') === 'migraine') store.set('mode', 'auto'); // migraine is now started, not picked
@@ -88,7 +94,7 @@
     view: store.get('view', 'today'),
     sel: sod(new Date()),
     modePref: store.get('mode', 'auto'),
-    level: store.get('level', 'dim'),
+    look: store.get('look', 'dark'), // migraine look: 'dark' or 'pastel'
     token: null, tokenExp: 0, healthGranted: false,
     signedIn: false, needsReauth: false, authError: '',
     allCalendars: [], calendars: [], events: [], loadedWeek: null, loading: false,
@@ -117,9 +123,9 @@
   function applyMode() {
     const m = mode();
     document.body.dataset.mode = m;
-    document.body.dataset.level = S.level;
+    document.body.dataset.look = S.look;
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.content = { work: '#FF8FA4', migraine: S.level === 'darker' ? '#0E0D14' : '#16151F', weekend: '#A790EA' }[m];
+    if (meta) meta.content = { work: '#FF8FA4', migraine: S.look === 'pastel' ? '#C4C2E6' : '#16151F', weekend: '#A790EA' }[m];
   }
 
   function toast(msg, actionLabel, fn) {
@@ -333,8 +339,15 @@
   const PH_NAME = { w: 'warning', a: 'aura', h: 'headache', r: 'recovering' };
   const enc36 = (t) => Math.round(t / 60000).toString(36);
   const dec36 = (s) => parseInt(s, 36) * 60000;
-  const encPhases = (list) => list.slice(-60).map((x) => PH_CODE[x.p] + enc36(x.t)).join(',').slice(0, 1000);
-  const decPhases = (s) => (s || '').split(',').filter(Boolean).map((x) => ({ p: PH_NAME[x[0]], t: dec36(x.slice(1)) })).filter((x) => x.p);
+  const encPhases = (list) => list.slice(-60).map((x) => (x.off ? PH_CODE[x.p].toUpperCase() : PH_CODE[x.p]) + enc36(x.t)).join(',').slice(0, 1000);
+  const decPhases = (s) => (s || '').split(',').filter(Boolean).map((x) => { const c = x[0]; const o = { p: PH_NAME[c.toLowerCase()], t: dec36(x.slice(1)) }; if (c !== c.toLowerCase()) o.off = true; return o; }).filter((x) => x.p);
+  // Which symptoms are on right now (several at once are fine)
+  function activePhases(a) {
+    const on = {};
+    for (const x of a.phases) { if (x.off) delete on[x.p]; else if (!on[x.p]) on[x.p] = x.t; }
+    return on;
+  }
+  const hadPhase = (a, p) => a.phases.some((x) => x.p === p && !x.off);
   const encMeds = (list) => { let out = list.slice(-20).map((m) => m.n.replace(/[|@]/g, ' ').slice(0, 30) + '@' + enc36(m.t)).join('|'); while (out.length > 1000) out = out.slice(out.indexOf('|') + 1); return out; };
   const decMeds = (s) => (s || '').split('|').filter(Boolean).map((x) => { const i = x.lastIndexOf('@'); return { n: x.slice(0, i), t: dec36(x.slice(i + 1)) }; });
 
@@ -430,14 +443,16 @@
     if (migraineActive()) return;
     S.attack = { active: true, start: Date.now(), end: null, phases: [], aura: [], auraStart: null, meds: [], eventId: null, synced: false, src: src || '' };
     persistHealth();
-    S.sheet = null; setScreen(null); S.view = 'today'; S.sel = sod(new Date());
+    S.sheet = null; setScreen(null); S.view = 'now'; S.sel = sod(new Date());
     render(); window.scrollTo(0, 0);
     toast('Migraine mode on', 'Undo', undoMigraine);
     syncAttack(S.attack).then(render);
   }
   async function undoMigraine() {
     const a = S.attack; if (!a) return;
-    S.attack = null; persistHealth(); render();
+    S.attack = null; persistHealth();
+    if (S.view === 'now') { S.view = 'today'; S.sel = sod(new Date()); }
+    render();
     if (a.eventId) {
       S.health.events = S.health.events.filter((x) => x.eventId !== a.eventId);
       if (!DEMO && S.health.calId) { try { await api(CAL + '/calendars/' + encodeURIComponent(S.health.calId) + '/events/' + encodeURIComponent(a.eventId), { method: 'DELETE' }); } catch (e) { console.warn(e); } }
@@ -447,6 +462,7 @@
     const a = S.attack; if (!a) return;
     a.active = false; a.end = Date.now();
     S.attack = null; persistHealth();
+    if (S.view === 'now') { S.view = 'today'; S.sel = sod(new Date()); }
     S.sheet = null; render();
     if (!healthOn()) { toast('Feel better! Migraine mode is off.'); return; }
     const ok = await syncAttack(a);
@@ -459,8 +475,11 @@
     fn(a); a.synced = false; persistHealth();
     clearTimeout(changeAttack._t); changeAttack._t = setTimeout(() => syncAttack(a).then(() => { if (!S.sheet || S.sheet.type !== 'meds') render(); }), 1200);
   }
-  function setPhase(p) {
-    changeAttack((a) => { a.phases.push({ p, t: Date.now() }); if (p === 'aura' && !a.auraStart) a.auraStart = Date.now(); });
+  function togglePhase(p) {
+    changeAttack((a) => {
+      if (activePhases(a)[p]) a.phases.push({ p, t: Date.now(), off: true });
+      else { a.phases.push({ p, t: Date.now() }); if (p === 'aura' && !a.auraStart) a.auraStart = Date.now(); }
+    });
   }
   function toggleAura(type) {
     changeAttack((a) => { a.aura = a.aura.includes(type) ? a.aura.filter((x) => x !== type) : a.aura.concat([type]); if (!a.auraStart) a.auraStart = Date.now(); });
@@ -536,7 +555,7 @@
   }
   function holdHint() {
     const n = store.get('holdHints', 0);
-    if (n >= 3) return '';
+    if (n >= 3 || migraineActive()) return '';
     if (!S.hintCounted) { S.hintCounted = true; store.set('holdHints', n + 1); }
     return '<p class="hold-hint">' + ICON.migraine + '<span>Tip: hold the date to start migraine mode</span></p>';
   }
@@ -563,6 +582,12 @@
     const dueToday = S.tasks.deadlines.filter((t) => t.due && sameDay(t.due, sel));
     if (dueToday.length) body += '<div class="allday">' + dueToday.map((t) => '<span class="tag" style="background:var(--d1)">Due: ' + esc(t.title) + '</span>').join('') + '</div>';
     if (!evs.length && !dueToday.length) body = S.loading ? '<div class="empty">Loading…</div>' : '<div class="empty"><span class="display">Free!</span>Nothing planned for this day.</div>';
+    if (!healthOn() && !migraineActive() && !store.get('logOffered', false)) {
+      body = '<div class="card offer-card"><span class="offer-k">' + ICON.shield(18) + 'NEW · OPTIONAL</span><h2 class="display">Private migraine log</h2>' +
+        '<span class="sub" style="margin-top:0">Log attacks with one tap and see your migraine days in the month view. Saved only in your own Google account.</span>' +
+        '<div class="offer-btns"><button class="add-line" data-action="consent">Learn more</button><button class="add-line offer-later" data-action="dismisslog">Not now</button></div>' +
+        '<a class="offer-privacy" href="privacy.html">Privacy info</a></div>' + body;
+    }
     const title = WD[sel.getDay()] + '\n' + ordinal(sel.getDate());
     return '<section class="hero">' + ICON.star +
       '<div class="topbar"><span class="eyebrow">' + MON[sel.getMonth()] + '</span><div class="weeknav">' + navBtns('prevweek', 'nextweek', 'week') + modePill() + '</div></div>' +
@@ -579,8 +604,8 @@
     if (!healthOn()) note = ' · not logged';
     else if (!a.synced && (S.needsReauth || !S.healthGranted)) note = ' · saves when you reconnect';
     const top = S.tasks.top3.find((t) => !t.done);
-    const cur = a.phases.length ? a.phases[a.phases.length - 1] : null;
-    const curName = cur ? PHASES.find((x) => x[0] === cur.p) : null;
+    const on = activePhases(a);
+    const nowList = PHASES.filter((x) => on[x[0]]).map((x) => x[1] + ' since ' + hm(new Date(on[x[0]])));
     const rest = eventsOn(now).filter((e) => e.end > now && !e.moved);
     const rows = rest.map((e) => {
       const canMove = !e.allDay && e.writable && e.start > now;
@@ -589,7 +614,7 @@
         (canMove ? '<button class="mig-small" data-action="movetomorrow" data-id="' + esc(e.id) + '">Move</button>' : '') + '</div>';
     }).join('');
     return '<section class="mig">' +
-      '<div class="mig-top"><span class="mig-label">' + ICON.migraine + '<span>MIGRAINE MODE</span></span>' +
+      '<div class="mig-top"><button class="pill mig-pill" data-action="mode" aria-label="Mode: Migraine. Change mode">' + ICON.migraine + '<span>Migraine</span></button>' +
       '<button class="mig-end" data-action="endmig">End migraine</button></div>' +
       '<span class="mig-status">Started ' + hm(start) + ' · ' + fmtDur(now - start) + note + '</span>' +
       '<h1 class="display mig-title">Just one thing.</h1>' +
@@ -598,9 +623,10 @@
       '<div class="mig-actions">' +
       '<button class="mig-btn blue" data-action="phase">' + ICON.wave(24) + '<span>How is it now?</span></button>' +
       '<button class="mig-btn rose" data-action="meds">' + ICON.pill(24) + '<span>Took meds</span></button></div>' +
-      (curName ? '<span class="mig-now">Now: ' + curName[1] + ' · since ' + hm(new Date(cur.t)) + '</span>' : '') +
+      (nowList.length ? '<span class="mig-now">Now: ' + nowList.join(' · ') + '</span>' : '') +
       '<span class="mig-section">THE REST CAN WAIT</span>' +
       (rows || '<div class="mig-row"><div class="mig-row-t"><span>Nothing else today.</span></div></div>') +
+      '<button class="mig-whole" data-action="view" data-view="today">Show my whole day ' + ICON.right + '</button>' +
       (healthOn() || S.loading ? '' : '<p class="mig-foot">Not logging. You can turn on the private migraine log in Settings once you feel better.</p>') +
       '</section>';
   }
@@ -668,10 +694,10 @@
       const s = new Date(a.start), e = new Date(a.end || Date.now());
       for (let d = sod(s); d <= e; d = addDays(d, 1)) {
         const k = ymd(d);
-        const ph = a.phases.filter((x) => ymd(new Date(x.t)) === k).map((x) => x.p);
+        const ph = a.phases.filter((x) => !x.off && ymd(new Date(x.t)) === k).map((x) => x.p);
         if (ph.length && ph.every((p) => p === 'recovering')) at(k).rec = true; else at(k).mig = true;
       }
-      if (a.aura.length || a.phases.some((x) => x.p === 'aura')) at(ymd(s)).aura = true;
+      if (a.aura.length || hadPhase(a, 'aura')) at(ymd(s)).aura = true;
       for (const m of a.meds) at(ymd(new Date(m.t))).med = true;
     }
     return map;
@@ -695,7 +721,7 @@
       grid += '<button class="' + cls + '" data-action="openday" data-date="' + k + '" aria-label="' + label + '"><span class="mnum">' + d.getDate() + '</span><span class="mdots">' +
         (h.aura ? '<i class="adot"></i>' : '') + '<i class="edot n' + Math.min(n, 3) + '"></i></span></button>';
     }
-    if (healthOn()) for (const a of allAttacks()) { const s = new Date(a.start); if (s.getMonth() === first.getMonth() && s.getFullYear() === first.getFullYear() && (a.aura.length || a.phases.some((x) => x.p === 'aura'))) auraAttacks++; }
+    if (healthOn()) for (const a of allAttacks()) { const s = new Date(a.start); if (s.getMonth() === first.getMonth() && s.getFullYear() === first.getFullYear() && (a.aura.length || hadPhase(a, 'aura'))) auraAttacks++; }
     const stats = healthOn() ? '<div class="mstats">' +
       '<div class="mstat rose"><b>' + migDays + '</b><span>migraine days</span></div>' +
       '<div class="mstat lav"><b>' + auraAttacks + '</b><span>attacks with aura</span></div>' +
@@ -743,7 +769,10 @@
 
   function bottomBar() {
     const b = (v, label) => '<button class="' + (S.view === v ? 'on' : '') + '" data-action="view" data-view="' + v + '"' + (S.view === v ? ' aria-current="page"' : '') + '>' + label + '</button>';
-    return '<nav class="bottombar" aria-label="Views"><div class="navseg">' + b('today', 'Day') + b('week', 'Week') + b('month', 'Month') + '</div>' +
+    const mig = migraineActive();
+    const cur = S.view === 'now' && !mig ? 'today' : S.view;
+    const b2 = (v, label) => '<button class="' + (cur === v ? 'on' : '') + '" data-action="view" data-view="' + v + '"' + (cur === v ? ' aria-current="page"' : '') + '>' + label + '</button>';
+    return '<nav class="bottombar' + (mig ? ' mig-nav' : '') + '" aria-label="Views"><div class="navseg">' + (mig ? b2('now', ICON.migraine + '<span>Now</span>') : '') + b2('today', 'Day') + b2('week', 'Week') + b2('month', 'Month') + '</div>' +
       (mode() === 'migraine' ? '' : '<button class="fab" data-action="addevent" aria-label="New event">' + ICON.plus + '</button>') + '</nav>';
   }
 
@@ -796,10 +825,11 @@
       (act ? '<button class="mode-opt on" data-action="endmig"><b>End migraine</b><span>Back to your colorful calendar</span></button>'
         : '<button class="mode-opt migraine-opt" data-action="startmig"><b>' + ICON.migraine + ' Migraine now</b><span>Dark, calm, only what matters. Shortcut: hold the date.</span></button>') +
       '<div class="modes">' +
-      opts.map(([k, n, d]) => '<button class="mode-opt' + (!act && S.modePref === k ? ' on' : '') + '" data-action="setmode" data-mode="' + k + '" aria-pressed="' + (S.modePref === k) + '"><b>' + n + '</b><span>' + d + '</span></button>').join('') +
+      (act ? '<span class="section-label">OR END MIGRAINE AND SWITCH TO</span>' : '') +
+      opts.map(([k, n, d]) => '<button class="mode-opt' + (!act && S.modePref === k ? ' on' : '') + '" data-action="setmode" data-mode="' + k + '" aria-pressed="' + (!act && S.modePref === k) + '"><b>' + n + '</b><span>' + d + '</span></button>').join('') +
       '</div>' +
-      '<span class="section-label">MIGRAINE SCREEN</span><div class="chips">' +
-      [['dim', 'Dim'], ['darker', 'Darker']].map(([k, n]) => '<button class="chip' + (S.level === k ? ' on' : '') + '" data-action="level" data-level="' + k + '" aria-pressed="' + (S.level === k) + '">' + n + '</button>').join('') + '</div>' +
+      '<span class="section-label">MIGRAINE LOOK</span><div class="looks">' +
+      [['dark', 'Dark', 'Dark, dimmed colors'], ['pastel', 'Pastel', 'Soft, light pastels']].map(([k, n, d]) => '<button class="look-opt look-' + k + (S.look === k ? ' on' : '') + '" data-action="look" data-look="' + k + '" aria-pressed="' + (S.look === k) + '"><span class="look-sw" aria-hidden="true"></span><b>' + n + '</b><span>' + d + '</span></button>').join('') + '</div>' +
       '<span class="section-label">MIGRAINE LOG</span>' + log +
       '<a class="danger" href="privacy.html">Privacy info</a>' +
       (DEMO ? '<a class="danger" href="./">Leave demo</a>' : S.signedIn ? '<button class="danger" data-action="signout">Sign out</button>' : '');
@@ -808,14 +838,27 @@
   function sheetPhase() {
     const a = S.attack;
     if (!a) return sheetTop('') + '<p>Migraine mode is off.</p>';
-    const cur = a.phases.length ? a.phases[a.phases.length - 1].p : null;
-    const tiles = PHASES.map(([k, n, ic, tone]) => '<button class="ph-tile ' + tone + (cur === k ? ' on' : '') + '" data-action="setphase" data-phase="' + k + '" aria-pressed="' + (cur === k) + '">' + ICON[ic](48) + '<span>' + n + '</span></button>').join('');
-    const showAura = cur === 'aura' || a.aura.length || a.phases.some((x) => x.p === 'aura');
-    const auraTypes = AURA_TYPES.map(([k, n, ic]) => '<button class="ph-aura' + (a.aura.includes(k) ? ' on' : '') + '" data-action="auratype" data-type="' + k + '" aria-pressed="' + a.aura.includes(k) + '" aria-label="' + n + '">' + ICON[ic](30) + '</button>').join('');
+    const on = activePhases(a), info = S.sheet.info;
+    const tiles = PHASES.map(([k, n, ic, tone, tip]) => {
+      const sel = !!on[k];
+      return '<div class="ph-wrap">' +
+        '<button class="ph-tile ' + tone + (sel ? ' on' : '') + '" data-action="setphase" data-phase="' + k + '" aria-pressed="' + sel + '" aria-describedby="tip-' + k + '">' +
+        (sel ? '<span class="ph-check">' + ICON.check + '</span>' : '') + ICON[ic](48) + '<span>' + n + '</span></button>' +
+        '<button class="ph-i" data-action="phinfo" data-key="' + k + '" aria-label="What is ' + n + '?" aria-expanded="' + (info === k) + '">i</button>' +
+        '<span class="ph-tip" role="tooltip" id="tip-' + k + '">' + esc(tip) + '</span></div>';
+    }).join('');
+    const infoRow = PHASES.find((x) => x[0] === info);
+    const showAura = !!on.aura || a.aura.length || hadPhase(a, 'aura');
+    const auraTypes = AURA_TYPES.map(([k, n, ic, tip]) => '<div class="ph-wrap ph-wrap-aura"><button class="ph-aura' + (a.aura.includes(k) ? ' on' : '') + '" data-action="auratype" data-type="' + k + '" aria-pressed="' + a.aura.includes(k) + '" aria-describedby="tip-a-' + k + '">' + ICON[ic](28) + '<span>' + n + '</span></button>' +
+      '<span class="ph-tip" role="tooltip" id="tip-a-' + k + '">' + esc(tip) + '</span></div>').join('');
     return sheetTop(healthOn() ? 'Saved to your private log' : 'Not logging') +
       '<h2 class="display ph-title">How is it right now?</h2>' +
+      '<p class="ph-sub">Pick everything that fits. Tap again to switch off.</p>' +
       '<div class="ph-grid">' + tiles + '</div>' +
-      (showAura ? '<div class="ph-box"><div class="ph-box-h"><span>AURA · OPTIONAL</span>' + (a.auraStart ? '<b>since ' + hm(new Date(a.auraStart)) + ' · ' + fmtDur(Date.now() - a.auraStart) + '</b>' : '') + '</div><div class="ph-auras">' + auraTypes + '</div></div>' : '') +
+      (infoRow ? '<div class="ph-info ' + infoRow[3] + '" role="note"><b>' + infoRow[1] + '</b><span>' + esc(infoRow[4]) + '</span></div>' : '') +
+      (showAura ? '<div class="ph-box"><div class="ph-box-h"><span>AURA · PICK ALL THAT FIT</span>' + (a.auraStart ? '<b>since ' + hm(new Date(a.auraStart)) + ' · ' + fmtDur(Date.now() - a.auraStart) + '</b>' : '') + '</div><div class="ph-auras">' + auraTypes + '</div>' +
+        '<button class="ph-more" data-action="aurainfo" aria-expanded="' + !!S.sheet.auraInfo + '">' + (S.sheet.auraInfo ? 'Hide explanations' : 'What do these mean?') + '</button>' +
+        (S.sheet.auraInfo ? '<div class="ph-aura-info">' + AURA_TYPES.map((x) => '<span><b>' + x[1] + ':</b> ' + esc(x[3]) + '</span>').join('') + '</div>' : '') + '</div>' : '') +
       '<p class="ph-share">“' + esc(C.shareText) + '”</p>' +
       '<button class="mig-btn sage wide" data-action="tell">' + ICON.send(24) + '<span>Tell my person</span></button>';
   }
@@ -883,7 +926,8 @@
     let main;
     if (S.view === 'week') main = viewWeek();
     else if (S.view === 'month') main = viewMonth();
-    else main = migraineActive() ? viewMigraineDay() : viewToday();
+    else if (S.view === 'now' && migraineActive()) main = viewMigraineDay();
+    else main = viewToday();
     app.innerHTML = main + bottomBar();
     if (S.sheet && (S.sheet.type === 'mode' || S.sheet.type === 'phase')) renderSheet();
   }
@@ -907,7 +951,7 @@
       case 'signout': closeSheet(); signOut(); break;
       case 'view':
         S.view = el.dataset.view; store.set('view', S.view);
-        if (S.view === 'today' && migraineActive()) S.sel = sod(new Date());
+        if (S.view === 'now') S.sel = sod(new Date());
         render(); window.scrollTo(0, 0);
         if (S.view === 'month') loadMonthAndRender();
         break;
@@ -925,13 +969,15 @@
         loadMonthAndRender();
         break;
       case 'mode': openSheet({ type: 'mode' }); break;
-      case 'setmode': S.modePref = el.dataset.mode; store.set('mode', S.modePref); closeSheet(); render(); break;
-      case 'level': S.level = el.dataset.level; store.set('level', S.level); render(); renderSheet(); break;
+      case 'setmode': S.modePref = el.dataset.mode; store.set('mode', S.modePref); closeSheet(); if (migraineActive()) endMigraine(); else render(); break;
+      case 'look': S.look = el.dataset.look; store.set('look', S.look); render(); renderSheet(); break;
       case 'startmig': startMigraine('settings'); break;
       case 'endmig': endMigraine(); break;
       case 'phase': openSheet({ type: 'phase' }); break;
       case 'meds': openSheet({ type: 'meds', med: '' }); break;
-      case 'setphase': setPhase(el.dataset.phase); renderSheet(); render(); break;
+      case 'setphase': togglePhase(el.dataset.phase); renderSheet(); render(); break;
+      case 'phinfo': S.sheet.info = S.sheet.info === el.dataset.key ? null : el.dataset.key; renderSheet(); break;
+      case 'aurainfo': S.sheet.auraInfo = !S.sheet.auraInfo; renderSheet(); break;
       case 'auratype': toggleAura(el.dataset.type); renderSheet(); break;
       case 'tell': tellMyPerson(); break;
       case 'logmed': logMed(el.dataset.med); closeSheet(); render(); break;
@@ -945,7 +991,8 @@
         } catch (err) { el.disabled = false; handleErr(err); }
         break;
       }
-      case 'consent': closeSheet(); S.consentTick = false; setScreen('consent'); render(); window.scrollTo(0, 0); break;
+      case 'dismisslog': store.set('logOffered', true); render(); toast('You can turn it on any time in Settings'); break;
+      case 'consent': store.set('logOffered', true); closeSheet(); S.consentTick = false; setScreen('consent'); render(); window.scrollTo(0, 0); break;
       case 'consentclose': setScreen(null); render(); break;
       case 'consenton': if (S.consentTick) { el.disabled = true; el.textContent = 'Turning on…'; await turnOnHealth(); if (S.screen) { el.disabled = false; el.textContent = 'Turn on migraine log'; } } break;
       case 'healthoff': turnOffHealth(); break;
@@ -1034,13 +1081,13 @@
     if (document.visibilityState === 'visible') {
       applyMode();
       if (!DEMO && S.signedIn && !S.needsReauth && Date.now() - (S.lastLoad || 0) > 60000) loadAll(true);
-      else if (migraineActive() && S.view === 'today' && !S.screen) render();
+      else if (migraineActive() && !S.screen) render();
     }
   });
   setInterval(() => {
     const before = document.body.dataset.mode; applyMode();
     const typing = S.sheet && ['event', 'task', 'meds'].includes(S.sheet.type);
-    if (!typing && !S.screen && (before !== document.body.dataset.mode || (migraineActive() && S.view === 'today'))) render();
+    if (!typing && !S.screen && (before !== document.body.dataset.mode || (migraineActive() && (S.view === 'now' || S.view === 'today')))) render();
   }, 60000);
 
   // ---------- demo data ----------
@@ -1093,6 +1140,7 @@
     if (saved && saved.e > Date.now()) { S.token = saved.t; S.tokenExp = saved.e; S.healthGranted = !!saved.h; S.signedIn = true; loadAll(true); }
     else if (store.get('known', false)) { S.signedIn = true; S.needsReauth = true; }
   }
+  if (migraineActive()) { S.view = 'now'; S.sel = sod(new Date()); }
   // Shortcut 1: the app-icon shortcut opens ./?migraine – straight into migraine mode
   const wantMigraine = PARAMS.has('migraine'), wantNew = PARAMS.has('new');
   if (wantMigraine || wantNew) history.replaceState(null, '', location.pathname + (DEMO ? '?demo' : ''));
